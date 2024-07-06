@@ -11,13 +11,30 @@ const DeleteUser = `${baseURL}/deleteuser`;
 
 const GetCardDetail = `${baseURL}/carddetails`;
 
-module.exports = 
-{
+const AddSong = `${baseURL}/addsong`;
+const UpdateSong = `${baseURL}/updatesong`;
+const DeleteSong = `${baseURL}/deleteSong`;
+const GetSongList = `${baseURL}/getsonglist`;
+
+const GetArtists = `${baseURL}/getartists`;
+const GetAlbums = `${baseURL}/getalbums`;
+const GetGenres = `${baseURL}/getgenres`;
+
+
+
+module.exports = {
     SignUpAPI, 
     LoginAPI,
     LogoutAPI,
     GetUserList,
     EditUser,
     DeleteUser,
-    GetCardDetail
+    GetCardDetail,
+    AddSong,
+    UpdateSong,
+    DeleteSong,
+    GetSongList,
+    GetArtists,
+    GetAlbums,
+    GetGenres,
  }
