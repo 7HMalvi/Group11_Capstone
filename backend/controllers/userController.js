@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Song = require('../models/Song');
+const Artist = require('../models/Artist');
+const Genre = require('../models/Genre');
+const Like = require('../models/Like');
 
 
 exports.userSignup= async (req,res) => {
@@ -137,8 +140,8 @@ exports.cardDetails = async (req,res) => {
 
         let noOfUsers = await User.find({userType: 'user'}).count();
         let noOfSongs = await Song.find({}).count();
-        let noOfArtists = 0;
-        let noOfGeneres = 0;
+        let noOfArtists = await Artist.find({isDeleted: false}).count();
+        let noOfGeneres = await Genre.find({isDeleted: false}).count();
         
         res.status(201).send({
             noOfUsers,
@@ -146,6 +149,53 @@ exports.cardDetails = async (req,res) => {
             noOfArtists,
             noOfGeneres
         })
+
+    }catch(error){
+        res.send({error: error.message})
+    }
+    
+}
+
+exports.graphData= async (req,res) => {
+    
+    try{
+
+        const likes = await Like.aggregate([
+            {
+              $group: {
+                _id: "$song",
+                likeCount: { $sum: 1 }
+              }
+            },
+            {
+              $lookup: {
+                from: "songs",
+                localField: "_id",
+                foreignField: "_id",
+                as: "song"
+              }
+            },
+            {
+              $unwind: "$song"
+            },
+            {
+              $project: {
+                _id: 0,
+                songTitle: "$song.title",
+                likeCount: 1
+              }
+            },
+            {
+                $sort: {likeCount: -1}
+            },
+            {
+                $limit: 5
+            }
+        ]);
+      
+        const formattedData = [["Song", "Like"], ...likes.map(like => [like.songTitle, like.likeCount])];
+
+        res.status(201).send({data: formattedData})
 
     }catch(error){
         res.send({error: error.message})
