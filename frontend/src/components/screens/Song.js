@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AddSong } from '../../services/APIRoutes';
 import { omit } from "lodash";
-import SongModal from '../custom/SongModal';
+import SongModal from '../modals/SongModal';
 import SongList from '../common/SongList';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch } from '@fortawesome/free-solid-svg-icons';
@@ -11,6 +11,7 @@ export default function Song() {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
+    privacy: 'public',
     artists: [],
     albums: [],
     genres: [],
@@ -28,9 +29,7 @@ export default function Song() {
           ...errors,
           "title": "Enter a valid title",
       });
-    }
-    else 
-    {
+    }else {
         let newObj = omit(errors, "title");
         setErrors(newObj);
     }
@@ -45,17 +44,13 @@ export default function Song() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log(formData)
-
     if(formData?.artists?.length===0 || formData?.albums?.length===0 || formData?.genres?.length===0){
       setErrors({
         ...errors,
         "select": "Please fill all the mandatory field"
       });
       return;
-    }
-    else
-    {
+    }else{
       let newObj = omit(errors, "select");
       setErrors(newObj);
     }
@@ -66,8 +61,7 @@ export default function Song() {
     formData.albums.forEach(album => form.append('albums[]', album.value));
     formData.genres.forEach(genre => form.append('genres[]', genre.value));
     form.append('song', formData.song);
-    if (formData.coverImage)
-    {
+    if (formData.coverImage){
       form.append('coverImage', formData.coverImage);
     }
 
@@ -75,8 +69,7 @@ export default function Song() {
       const token = localStorage.getItem('userToken');
       const response = await fetch(AddSong, {
         method: 'POST',
-        headers: 
-        {
+        headers: {
           'Authorization': `Bearer ${token}`,
         },
         body: form
@@ -89,9 +82,7 @@ export default function Song() {
       } else {
         console.error('Error adding song:', data.error);
       }
-    } 
-    catch (error) 
-    {
+    } catch (error) {
       console.error('Error adding song:', error);
     }
   };
@@ -129,7 +120,7 @@ export default function Song() {
         handleFileChange={handleFileChange}
       />
 
-      <SongList searchTerm={searchTerm}/>
+      <SongList searchTerm={searchTerm} page={"song"}/>
 
     </div>
   );
