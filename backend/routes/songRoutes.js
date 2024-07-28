@@ -2,7 +2,11 @@ const { Router } = require("express");
 const { auth } = require("../middleware/auth");
 const { upload } = require("../utils/multer");
 const {
-    addSong, updateSong, deleteSong, getSong, getSongFile, getCoverImage, getSongList
+    addSong, updateSong, deleteSong, getSong, 
+    getSongFile, getCoverImage, getSongList, 
+    addLike, removeLike,
+    addComment, getComments,
+    addPlaylist, removePlaylist, createPlaylist, deletePlaylist, getPlaylists, updatePlaylist
 } = require("../controllers/songController");
 
 
@@ -24,6 +28,20 @@ songRouter.delete("/deletesong/:id", auth, deleteSong);
 songRouter.get("/getsongfile/:id", auth, getSongFile);
 songRouter.get("/getcoverimage/:id", auth, getCoverImage);
 songRouter.post("/getsonglist", auth, getSongList);
+
+/* Features */
+songRouter.post("/addlike", auth, addLike);
+songRouter.post("/removelike", auth, removeLike);
+
+songRouter.post("/addcomment", auth, addComment);
+songRouter.get("/getcomments/:id", auth, getComments);
+
+songRouter.post("/createplaylist", auth, createPlaylist);
+songRouter.delete("/deleteplaylist/:id", auth, deletePlaylist);
+songRouter.post("/addplaylist", auth, addPlaylist);
+songRouter.post("/removeplaylist", auth, removePlaylist);
+songRouter.post("/getplaylists", auth, getPlaylists);
+songRouter.post("/updateplaylist", auth, updatePlaylist);
 
 
 module.exports = songRouter;
