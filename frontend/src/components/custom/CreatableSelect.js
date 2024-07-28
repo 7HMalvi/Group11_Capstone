@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AsyncCreatableSelect from 'react-select/async-creatable';
 
-const customStyles = 
-{
+const customStyles = {
   control: (base) => ({
     ...base,
     backgroundColor: 'black',
@@ -11,8 +10,7 @@ const customStyles =
     borderBottomColor: '#dc2626',
     borderRadius: 0,
     boxShadow: 'none',
-    '&:hover': 
-    {
+    '&:hover': {
       borderColor: 'transparent',
       borderBottomColor: '#b91c1c',
     },
@@ -55,27 +53,45 @@ const customStyles =
 };
 
 const CreatableSelect = ({ onChange, value, url }) => {
+  const [options, setOptions] = useState([]);
+  const [initialLoad, setInitialLoad] = useState(false);
+
   const loadOptions = async (inputValue) => {
-    try
-     {
-      console.log('inputValue:', inputValue);
+    try {
       const token = localStorage.getItem('userToken');
       const response = await fetch(url, {
         method: 'POST',
-        headers: 
-        {
+        headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ search: inputValue })
+        body: JSON.stringify({ search: inputValue }),
       });
       const data = await response.json();
       return data.data;
-    }
-     catch (error)
-    {
+    } catch (error) {
       console.error('Error fetching data:', error);
       return [];
+    }
+  };
+
+  useEffect(() => {
+    if (!initialLoad) {
+      const fetchInitialOptions = async () => {
+        const initialOptions = await loadOptions('');
+        setOptions(initialOptions);
+      };
+      fetchInitialOptions();
+      setInitialLoad(true);
+    }
+  }, [initialLoad]);
+
+  const handleFocus = () => {
+    if (!initialLoad) {
+      loadOptions('').then((initialOptions) => {
+        setOptions(initialOptions);
+        setInitialLoad(true);
+      });
     }
   };
 
@@ -85,7 +101,9 @@ const CreatableSelect = ({ onChange, value, url }) => {
       isMulti
       styles={customStyles}
       loadOptions={loadOptions}
+      defaultOptions={options}
       onChange={onChange}
+      onFocus={handleFocus}
       value={value}
     />
   );

@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { AddSong } from '../../services/APIRoutes';
 import { omit } from "lodash";
 import SongModal from '../modals/SongModal';
+import { AddSong } from '../../services/APIRoutes';
 import SongList from '../common/SongList';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch } from '@fortawesome/free-solid-svg-icons';
 
+export default function Upload() {
 
-export default function Song() {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
-    privacy: 'public',
     artists: [],
     albums: [],
     genres: [],
@@ -63,6 +62,9 @@ export default function Song() {
     form.append('song', formData.song);
     if (formData.coverImage){
       form.append('coverImage', formData.coverImage);
+    }
+    if(formData.privacy!=="public"){
+      form.append('isPrivate', true);
     }
 
     try {
@@ -118,10 +120,11 @@ export default function Song() {
         handleSubmit={handleSubmit}
         handleTitle={handleTitle}
         handleFileChange={handleFileChange}
+        isUpload={true}
       />
 
-      <SongList searchTerm={searchTerm} page={"song"}/>
+      <SongList searchTerm={searchTerm} page={"upload"}/>
 
     </div>
-  );
+  )
 }
