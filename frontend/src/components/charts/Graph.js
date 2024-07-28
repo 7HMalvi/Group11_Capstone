@@ -1,23 +1,34 @@
-//Static Graph 
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Chart } from "react-google-charts";
-
-export const data = [
-  ["Song", "Like"],
-  ["Song 1", 11],
-  ["Song 2", 2],
-  ["Song 3", 2],
-  ["Song 4", 2],
-  ["Song 5", 7],
-];
+import { GetGraphData } from "../../services/APIRoutes";
 
 export const options = {
   title: "Trending Songs",
-  backgroundColor: "black"
+  backgroundColor: "black",
+  titleTextStyle: { color: "white" },
+  legend: { textStyle: { color: "white" } },
+  pieSliceTextStyle: { color: "black" }
 };
 
 export default function Graph() {
+  const [data, setData] = useState([["Song", "Like"]]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const token = localStorage.getItem('userToken');
+      const response = await fetch(GetGraphData, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setData(data.data);
+    }
+    fetchData();
+  }, []);
+
   return (
     <div>
       <Chart
@@ -28,5 +39,5 @@ export default function Graph() {
         height={"400px"}
       />
     </div>
-  )
+  );
 }
