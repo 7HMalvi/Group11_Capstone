@@ -5,6 +5,10 @@ const Song = require('../models/Song');
 const Artist = require('../models/Artist');
 const Album = require('../models/Album');
 const Genre = require('../models/Genre');
+const Like = require('../models/Like');
+const Comment = require('../models/Comment');
+const Playlist = require('../models/Playlist');
+
 
 const findOrCreate = async (Model, value) => {
     if (mongoose.Types.ObjectId.isValid(value)) {
@@ -153,8 +157,6 @@ exports.getSong = async (req,res) => {
            throw new Error("Song not found!"); 
         }
 
-        console.log("song...", song);
-
         res.status(201).send({ message: 'Song fetched successfully!', song });
 
     }catch(error){
@@ -223,7 +225,8 @@ exports.getCoverImage = async (req, res) => {
 
 exports.getSongList = async (req, res) => {
     try {
-        const { search, artists, albums, genres, addedby } = req.body;
+        const { search, artists, albums, genres, isUser } = req.body;
+        const userId = req.user._id;
 
         let filter = {};
         let aggregateArray = [];
@@ -233,19 +236,24 @@ exports.getSongList = async (req, res) => {
         }
 
         if (artists && artists.length > 0) {
-            filter.artists = { $in: artists.map(id => mongoose.Types.ObjectId(id)) };
+            filter.artists = { $in: artists.map(id => new mongoose.Types.ObjectId(id)) };
         }
 
         if (albums && albums.length > 0) {
-            filter.albums = { $in: albums.map(id => mongoose.Types.ObjectId(id)) };
+            filter.albums = { $in: albums.map(id => new mongoose.Types.ObjectId(id)) };
         }
 
         if (genres && genres.length > 0) {
-            filter.genres = { $in: genres.map(id => mongoose.Types.ObjectId(id)) };
+            filter.genres = { $in: genres.map(id => new mongoose.Types.ObjectId(id)) };
         }
-
-        if (addedby) {
-            filter.addedBy = mongoose.Types.ObjectId(addedby);
+        if (isUser) {
+            filter.addedBy = new mongoose.Types.ObjectId(req.user._id);
+        }else if(req.user.userType!=="admin"){
+            filter.$or = [
+                { isPrivate: false },
+                { isPrivate: { $exists: false } },
+                { addedBy: new mongoose.Types.ObjectId(req.user._id) }
+            ];
         }
 
         aggregateArray.push({ $match: filter });
@@ -255,18 +263,313 @@ exports.getSongList = async (req, res) => {
             { $lookup: { from: 'albums', localField: 'albums', foreignField: '_id', as: 'albums' } },
             { $lookup: { from: 'genres', localField: 'genres', foreignField: '_id', as: 'genres' } },
             { $lookup: { from: 'users', localField: 'addedBy', foreignField: '_id', as: 'addedBy' } },
-            { $unwind: { path: '$addedBy', preserveNullAndEmptyArrays: true } }
+            { $unwind: { path: '$addedBy', preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: 'likes',
+                    let: { songId: '$_id' },
+                    pipeline: [
+                        { $match: { $expr: { $and: [{ $eq: ['$song', '$$songId'] }, { $eq: ['$user', new mongoose.Types.ObjectId(userId)] }] } } },
+                        { $project: { _id: 1 } }
+                    ],
+                    as: 'likes'
+                }
+            },
+            {
+                $addFields: {
+                    liked: { $cond: { if: { $eq: [{ $size: '$likes' }, 0] }, then: false, else: true } }
+                }
+            },
+            { $sort: { createdAt: -1 } }
         );
-
-        // const skip = (pageno - 1) * pagesize;
-        // aggregateArray.push({ $skip: skip });
-        // aggregateArray.push({ $limit: pagesize });
-        aggregateArray.push({ $sort: {createdAt: -1} });
 
         const songs = await Song.aggregate(aggregateArray);
 
         res.status(200).send({ songs });
 
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.addLike = async (req, res) => {
+    try {
+
+        const { id } = req.body;
+        const song = await Song.findById(id);
+        if(!song){
+            throw new Error("Song not found!");
+        }
+
+        let isOneLike = await Like.findOne({ user: req.user._id }).count();
+        if(isOneLike === 0){
+            if(!await Playlist.findOne({ name: 'Liked Songs', user: req.user._id })){
+                const playlist = new Playlist({
+                    name: 'Liked Songs',
+                    user: req.user._id,
+                    song: [song._id]
+                });
+                await playlist.save();
+            }else{
+                await Playlist.findOneAndUpdate({ name: 'Liked Songs', user: req.user._id }, { $addToSet: { song: song._id } });
+            }
+        }else{
+            await Playlist.findOneAndUpdate({ name: 'Liked Songs', user: req.user._id }, { $addToSet: { song: song._id } });
+        }
+
+        let like = new Like({
+            user: req.user._id,
+            song: song._id
+        });
+        await like.save();
+        like = await Like.findById(like._id).populate('user').populate('song');
+
+        res.status(200).send({ like });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.removeLike = async (req, res) => {
+    try {
+
+        const { id } = req.body;
+
+        const song = await Song.findById(id);
+        if(!song){
+            throw new Error("Song not found!");
+        }
+
+        const like = await Like.deleteOne({
+            user: req.user._id,
+            song: song._id
+        }).populate('user').populate('song');
+
+        let isOneLike = await Like.findOne({ user: req.user._id}).count();
+        if(isOneLike === 0){
+            await Playlist.findOneAndDelete({ name: 'Liked Songs', user: req.user._id });
+        }
+
+        res.status(200).send({ like });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.addComment = async (req, res) => {
+    try {
+
+        const { message, song } = req.body;
+
+        let comment = new Comment({
+            user: req.user._id,
+            song: song,
+            message: message
+        });
+        await comment.save();
+
+        comment = await Comment.findById(comment._id).populate('user');
+
+        res.status(200).send({ comment });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.getComments = async (req, res) => {
+    try {
+
+        const comments = await Comment.find({ song: req.params.id }).populate('user').sort({ createdAt: -1 });
+
+        res.status(200).send({ comments });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.createPlaylist = async (req, res) => {
+    try {
+        const { name } = req.body;
+
+        let playlist = new Playlist({
+            name,
+            user: req.user._id
+        });
+        await playlist.save();
+
+        playlist = await Playlist.findById(playlist._id).populate('user');
+
+        res.status(200).send({ playlist });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.deletePlaylist = async (req, res) => {
+    try {
+        const playlist = await Playlist.findByIdAndDelete(req.params.id);
+        if(!playlist){
+            throw new Error("Playlist not found!");
+        }
+
+        res.status(200).send({ playlist });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.addPlaylist = async (req, res) => {
+    try {
+        const { songIds, playlistId } = req.body;
+
+        let playlist = await Playlist.findByIdAndUpdate(
+            playlistId,
+            { $addToSet: { song: songIds } },
+            { new: true }
+        );
+        if(!playlist){
+            throw new Error("Playlist not found!");
+        }
+
+        if(playlist.name === 'Liked Songs'){
+            for (const songId of songIds){
+                if(!await Like.findOne({ user: playlist.user, song: songId })){
+                    const like = new Like({ user: playlist.user, song: songId });
+                    await like.save();
+                }
+            }
+        }
+
+        playlist = await Playlist.findById(playlist._id)
+            .populate('user')
+            .populate({
+                path: 'song',
+                populate: [
+                    { path: 'artists' },
+                    { path: 'albums' },
+                    { path: 'genres' }
+                ]
+            });
+
+        res.status(200).send({ playlist });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.removePlaylist = async (req, res) => {
+    try {
+        const { songId, playlistId } = req.body;
+
+        let playlist = await Playlist.findByIdAndUpdate(
+            playlistId,
+            { $pull: { song: songId } },
+            { new: true }
+        );
+        if(!playlist){
+            throw new Error("Playlist not found!");
+        }
+
+        if(playlist.name === 'Liked Songs'){
+            await Like.deleteOne({ user: playlist.user, song: songId });
+        }
+
+        playlist = await Playlist.findById(playlist._id)
+            .populate('user')
+            .populate({
+                path: 'song',
+                populate: [
+                    { path: 'artists' },
+                    { path: 'albums' },
+                    { path: 'genres' }
+                ]
+            });
+
+        res.status(200).send({ playlist });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.getPlaylists = async (req, res) => {
+    try {
+        let playlists = await Playlist.find({ user: req.user._id })
+            .populate('user')
+            .populate({
+                path: 'song',
+                populate: [
+                    { path: 'artists' },
+                    { path: 'albums' },
+                    { path: 'genres' }
+                ]
+            })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (req?.body?.songId) {
+            for (let i = 0; i < playlists.length; i++) {
+                const containsSong = playlists[i]?.song
+                    ? playlists[i].song.some(song => song._id.toString() === req.body.songId)
+                    : false;
+                playlists[i] = { ...playlists[i], containsSong };
+            }
+        }
+
+        for (let i = 0; i < playlists.length; i++) {
+            const user = playlists[i].user._id;
+            const songsWithLikes = [];
+
+            for (let j = 0; j < playlists[i].song.length; j++) {
+                const song = playlists[i].song[j];
+                const liked = await Like.findOne({ user, song: song._id }) ? true : false;
+                songsWithLikes.push({ ...song, liked });
+            }
+
+            playlists[i] = { ...playlists[i], song: songsWithLikes };
+        }
+
+        res.status(200).send({ playlists });
+
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+};
+
+exports.updatePlaylist = async (req, res) => {
+    try {
+        const { songId, playlistIds } = req.body;
+
+        const allPlaylists = await Playlist.find();
+
+        for (const playlist of allPlaylists) {
+            if (playlistIds.includes(playlist._id.toString())) {
+                if (!playlist.song.includes(songId)) {
+                    playlist.song.push(songId);
+                    if (playlist.name === 'Liked Songs') {
+                        const like = new Like({ user: playlist.user, song: songId });
+                        await like.save();}
+                }
+            } else {
+                const songIndex = playlist.song.indexOf(songId);
+                if (songIndex > -1) {
+                    playlist.song.splice(songIndex, 1);
+                    if (playlist.name === 'Liked Songs') {
+                        await Like.deleteOne({ user: playlist.user, song: songId });
+                    }
+                }
+            }
+            await playlist.save();
+        }
+
+        res.status(200).send({ message: 'Playlists updated successfully' });
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
