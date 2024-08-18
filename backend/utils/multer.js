@@ -7,6 +7,7 @@ var storage = multer.diskStorage({
         
         fs.mkdirsSync("./photo");
         fs.mkdirsSync("./audio");
+        fs.mkdirsSync("./lyrics");
 
         const fileType = file.mimetype.split('/')[0];
         let uploadPath;
@@ -15,6 +16,8 @@ var storage = multer.diskStorage({
             uploadPath = './photo';
         } else if (fileType === 'audio') {
             uploadPath = './audio';
+        } else if (fileType === 'text') {
+            uploadPath = './lyrics';
         } else {
             uploadPath = './other';
             fs.mkdirsSync("./other");
