@@ -4,10 +4,15 @@ const baseURL = "http://localhost:5000";
 const SignUpAPI = `${baseURL}/signup`;
 const LoginAPI = `${baseURL}/login`;
 const LogoutAPI = `${baseURL}/logout`;
+const ForgotPasswordAPI = `${baseURL}/forgotpassword`;
 
 const GetUserList = `${baseURL}/getuserlist`;
 const EditUser = `${baseURL}/edituser`;
 const DeleteUser = `${baseURL}/deleteuser`;
+const GetProfile = `${baseURL}/getuser`;
+const EditProfile = `${baseURL}/editprofile`;
+const EditProfilePic = `${baseURL}/editprofilepic`;
+const RemoveProfilePic = `${baseURL}/removeprofilepic`;
 
 const GetCardDetail = `${baseURL}/carddetails`;
 const GetGraphData = `${baseURL}/getgraphdata`;
@@ -46,12 +51,21 @@ const AddArtist = `${baseURL}/addartist`;
 const AddAlbum = `${baseURL}/addalbum`;
 const AddGenre = `${baseURL}/addgenre`;
 
+const CheckPro = `${baseURL}/checkpro`;
+const CreatePaymentIntent = `${baseURL}/create-payment-intent`;
+const ConfirmPayment = `${baseURL}/confirm-payment`;
+
 
 module.exports = {
     SignUpAPI, 
     LoginAPI,
     LogoutAPI,
+    ForgotPasswordAPI,
     GetUserList,
+    GetProfile,
+    EditProfile,
+    EditProfilePic,
+    RemoveProfilePic,
     EditUser,
     DeleteUser,
     GetCardDetail,
@@ -81,5 +95,8 @@ module.exports = {
     AddPlaylist,
     RemovePlaylist,
     GetPlaylists,
-    UpdatePlaylist
+    UpdatePlaylist,
+    CheckPro,
+    CreatePaymentIntent,
+    ConfirmPayment
  }
