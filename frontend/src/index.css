@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    background-color: black;
+}
+
+*{
+    font-family: "Josefin Sans", Sans-serif;
+    color: white;
+}
+
+text{
+    fill: white;
+}
+
+.ReactModal__Overlay{
+    background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.rhap_progress-filled{
+    background-color: #f13333 !important;
+}
+
+.rhap_progress-indicator{
+    background-color: #f13333 !important;
+}
+
+.rhap_play-pause-button svg path{
+    fill: #f13333 !important;
+}
+
+.previous{
+    color:#f13333 !important;
+}
+
+.next{
+    color:#f13333 !important;
+}
+
+.music img{
+    width: 50px;
+    height: 50px;
+    animation: bubble 7s linear infinite;
+    z-index: -100;
+}
+
+.music{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    position: absolute;
+    bottom: 0;
+}
+
+@keyframes bubble {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    75% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-80vh);
+        opacity: 0;
+    }
+}
+
+.music img:nth-child(1){
+    animation-delay: 2s;
+}
+.music img:nth-child(2){
+    animation-delay: 1s;
+}
+.music img:nth-child(3){
+    animation-delay: 3s;
+}
+.music img:nth-child(4){
+    animation-delay: 4.5s;
+}
+.music img:nth-child(5){
+    animation-delay: 3s;
+}
+.music img:nth-child(6){
+    animation-delay: 6s;
+}
+.music img:nth-child(7){
+    animation-delay: 7s;
+}
+
+.fa-heart path, .fa-heart-crack path, .fa-trash path{
+    fill: #f13333 !important;
+}
