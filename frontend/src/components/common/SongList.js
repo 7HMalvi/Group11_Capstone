@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import ReactPaginate from 'react-paginate';
 import Modal from 'react-modal';
 import { omit } from "lodash";
-import 'react-h5-audio-player/lib/styles.css';
-import AudioPlayer from 'react-h5-audio-player';
 import { GetSongList, UpdateSong, DeleteSong, LikeSong, UnlikeSong, AddComment, GetComments, GetPlaylists, UpdatePlaylist } from '../../services/APIRoutes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faHeart as faSolidHeart, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faHeart as faSolidHeart, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faRegularHeart } from '@fortawesome/free-regular-svg-icons';
 import EditSongModal from '../modals/EditSongModal';
+import SongDetailModal from '../modals/SongDetailModal';
 
-const SongList = ({ searchTerm, page }) => {
+const SongList = ({ searchTerm, page, filterGenre }) => {
   const [songs, setSongs] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedSong, setSelectedSong] = useState(null);
@@ -27,17 +26,18 @@ const SongList = ({ searchTerm, page }) => {
     albums: [],
     genres: [],
     song: null,
-    coverImage: null
+    coverImage: null,
+    lyrics: null
   });
   const [errors, setErrors] = useState({});
 
   const songsPerPage = 10;
 
   useEffect(() => {
-    fetchSongs(searchTerm);
-  }, [searchTerm]);
+      fetchSongs(searchTerm, filterGenre);
+  }, [searchTerm, filterGenre]);
 
-  const fetchSongs = async (search) => {
+  const fetchSongs = async (search, filterGenre) => {
     try {
       const token = localStorage.getItem('userToken');
 
@@ -49,6 +49,13 @@ const SongList = ({ searchTerm, page }) => {
         }
       }
 
+      if(filterGenre){
+        payload = {
+          ...payload,
+          genres: [filterGenre]
+        }
+      }
+
       const response = await fetch(GetSongList, {
         method: 'POST',
         headers: {
@@ -57,6 +64,7 @@ const SongList = ({ searchTerm, page }) => {
         },
         body: JSON.stringify(payload)
       });
+      
       const data = await response.json();
       setSongs(data.songs);
     } catch (error) {
@@ -69,23 +77,20 @@ const SongList = ({ searchTerm, page }) => {
       const token = localStorage.getItem('userToken');
       const response = await fetch(`${GetComments}/${songId}`, {
         method: 'GET',
-        headers: 
-        {
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
       });
       const data = await response.json();
       return data.comments;
-    } catch (error) 
-    {
+    } catch (error) {
       console.error('Error fetching comments:', error);
     }
   };
 
   const fetchPlaylistsWithSongPresence = async (song) => {
-    try 
-    {
+    try {
       setSelectedSong(song);
       const token = localStorage.getItem('userToken');
       const response = await fetch(GetPlaylists, {
@@ -104,26 +109,22 @@ const SongList = ({ searchTerm, page }) => {
     }
   };
 
-  const handlePageClick = (data) => 
-  {
+  const handlePageClick = (data) => {
     setCurrentPage(data.selected);
   };
 
-  const openModal = async (song) =>
-  {
+  const openModal = async (song) => {
     const comments = await fetchComments(song._id);
     setSelectedSong({ ...song, comments });
     setModalIsOpen(true);
   };
 
-  const closeModal = () => 
-  {
+  const closeModal = () => {
     setModalIsOpen(false);
     setSelectedSong(null);
   };
 
-  const openEditModal = (song) => 
-  {
+  const openEditModal = (song) => {
     setFormData({
       title: song.title,
       artists: song.artists.map(ele => ({ label: ele.name, value: ele._id })),
@@ -138,8 +139,7 @@ const SongList = ({ searchTerm, page }) => {
     setEditModalIsOpen(true);
   };
 
-  const handleTitle = (e) => 
-  {
+  const handleTitle = (e) => {
     const { value } = e.target;
     if (value === "") {
       setErrors({
@@ -153,8 +153,7 @@ const SongList = ({ searchTerm, page }) => {
     setFormData({ ...formData, title: value });
   };
 
-  const handleFileChange = (e) => 
-  {
+  const handleFileChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.files[0] });
   };
 
@@ -183,6 +182,9 @@ const SongList = ({ searchTerm, page }) => {
     if (formData.coverImage) {
       form.append('coverImage', formData.coverImage);
     }
+    if (formData.lyrics) {
+      form.append('lyrics', formData.lyrics);
+    }
 
     try {
       const token = localStorage.getItem('userToken');
@@ -206,8 +208,7 @@ const SongList = ({ searchTerm, page }) => {
     }
   };
 
-  const handleDelete = async (songId) => 
-  {
+  const handleDelete = async (songId) => {
     try {
       const token = localStorage.getItem('userToken');
       const response = await fetch(`${DeleteSong}/${songId}`, {
@@ -229,8 +230,7 @@ const SongList = ({ searchTerm, page }) => {
     }
   };
 
-  const handleLike = async (song) => 
-  {
+  const handleLike = async (song) => {
     try {
       const token = localStorage.getItem('userToken');
       const response = await fetch(`${song.liked === true ? UnlikeSong : LikeSong}`, {
@@ -247,9 +247,7 @@ const SongList = ({ searchTerm, page }) => {
         if(selectedSong?._id === song?._id) {
           setSelectedSong({ ...selectedSong, liked: !selectedSong.liked });
         }
-      } else 
-      {
-
+      } else {
         const data = await response.json();
         console.error('Error updating song like status:', data.error);
       }
@@ -323,201 +321,123 @@ const SongList = ({ searchTerm, page }) => {
   const selectedSongs = songs.length > 0 ? songs.slice(startIndex, startIndex + songsPerPage) : [];
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-4 m-3" style={{ height: "500px" }}>
-        {selectedSongs.length > 0 ? (
-          selectedSongs.map((song) => (
-            <div
-              key={song._id}
-              className="w-36 cursor-pointer text-center shadow-red bg-black"
-              style={{ height: "220px" }}
-              onClick={() => openModal(song)}
+  <div>
+    <div className="flex flex-wrap justify-start gap-4 m-3 min-h-[500px]">
+      {selectedSongs.length > 0 ? (
+        selectedSongs.map((song) => (
+          <div
+            key={song._id}
+            className="w-36 cursor-pointer text-center shadow-red bg-black"
+            style={{ height: "220px" }}
+            onClick={() => openModal(song)}
+          >
+            <img src={"https://backendgroovix.onrender.com"+song.coverImage} alt={song.title} className="w-full h-auto" />
+            <h3
+              className="mt-2 text-white"
+              style={{ height: "40px", overflow: "hidden", fontSize: "12px" }}
             >
-              <img src={song.coverImage} alt={song.title} className="w-full h-auto" />
-              <h3
-                className="mt-2 text-white"
-                style={{ height: "40px", overflow: "hidden", fontSize: "12px" }}
-              >
-                {song.title}
-              </h3>
-              {localStorage.getItem("userType") === "user" && (
-                <FontAwesomeIcon
-                  icon={faPlus}
-                  className="cursor-pointer float-left ml-3"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fetchPlaylistsWithSongPresence(song);
-                    setPlaylistModalIsOpen(true);
-                  }}
+              {song.title}
+            </h3>
+            {localStorage.getItem("userType") === "user" && (
+              <FontAwesomeIcon
+                icon={faPlus}
+                className="cursor-pointer float-left ml-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fetchPlaylistsWithSongPresence(song);
+                  setPlaylistModalIsOpen(true);
+                }}
+              />
+            )}
+            {localStorage.getItem("userType") === "user" && (
+              <FontAwesomeIcon
+                icon={song.liked === true ? faSolidHeart : faRegularHeart}
+                className="cursor-pointer float-right mr-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLike(song);
+                }}
+              />
+            )}
+          </div>
+        ))
+      ) : (
+        <div className="w-full text-center text-white">No songs found</div>
+      )}
+    </div>
+
+    <ReactPaginate
+      previousLabel={"Previous"}
+      nextLabel={"Next"}
+      breakLabel={"..."}
+      breakClassName={"break-me"}
+      pageCount={Math.ceil(songs.length / songsPerPage)}
+      marginPagesDisplayed={2}
+      pageRangeDisplayed={10}
+      onPageChange={handlePageClick}
+      containerClassName={"flex justify-center mt-4 space-x-2"}
+      activeClassName={"font-bold underline"}
+    />
+
+    <SongDetailModal
+      isOpen={modalIsOpen}
+      onRequestClose={closeModal}
+      song={selectedSong}
+      page={page}
+      openEditModal={openEditModal}
+      handleDelete={handleDelete}
+      handleLike={handleLike}
+      commentText={commentText}
+      setCommentText={setCommentText}
+      handleAddComment={handleAddComment}
+    />
+
+    <EditSongModal
+      isOpen={editModalIsOpen}
+      setIsOpen={setEditModalIsOpen}
+      formData={formData}
+      setFormData={setFormData}
+      errors={errors}
+      setErrors={setErrors}
+      handleSubmit={handleSubmit}
+      handleTitle={handleTitle}
+      handleFileChange={handleFileChange}
+      page={page}
+    />
+
+    <Modal
+      isOpen={playlistModalIsOpen}
+      onRequestClose={() => setPlaylistModalIsOpen(false)}
+      contentLabel="Select Playlists"
+      className="bg-black shadow-red p-6 rounded-lg w-full md:w-3/4 lg:w-2/3 xl:w-1/2 mx-auto my-20"
+    >
+      <h2 className="text-red-500 mb-4">Select Playlists</h2>
+      <div className="playlists">
+        {playlists.length > 0 ? (
+          playlists.map((playlist) => (
+            <div key={playlist._id} className="playlist mb-2">
+              <label className="text-white">
+                <input
+                  type="checkbox"
+                  checked={selectedPlaylists.includes(playlist._id)}
+                  onChange={() => togglePlaylistSelection(playlist._id)}
                 />
-              )}
-              {localStorage.getItem("userType") === "user" && (
-                <FontAwesomeIcon
-                  icon={song.liked === true ? faSolidHeart : faRegularHeart}
-                  className="cursor-pointer float-right mr-3"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike(song);
-                  }}
-                />
-              )}
+                {playlist.name}
+              </label>
             </div>
           ))
         ) : (
-          <div className="w-full text-center text-white">No songs found</div>
+          <p className="text-white">No playlists available.</p>
         )}
       </div>
-
-      <ReactPaginate
-        previousLabel={"Previous"}
-        nextLabel={"Next"}
-        breakLabel={"..."}
-        breakClassName={"break-me"}
-        pageCount={Math.ceil(songs.length / songsPerPage)}
-        marginPagesDisplayed={2}
-        pageRangeDisplayed={10}
-        onPageChange={handlePageClick}
-        containerClassName={"flex justify-center mt-4 space-x-2"}
-        activeClassName={"font-bold underline"}
-      />
-
-      <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={closeModal}
-        contentLabel="Song Details"
-        className="bg-black shadow-red p-6 rounded-lg w-full md:w-3/4 lg:w-2/3 xl:w-1/2 mx-auto my-20"
+      <button
+        className="mt-4 bg-red-500 text-white py-1 px-4 rounded"
+        onClick={handleAddSongToPlaylists}
       >
-        {selectedSong && (
-          <div className="flex flex-col md:flex-row">
-            <div className="md:w-2/3">
-              {page !== "home" && (
-                <button
-                  className="absolute text-white p-1"
-                  style={{ marginTop: "-3px", marginLeft: "275px" }}
-                  onClick={() => openEditModal(selectedSong)}
-                >
-                  <FontAwesomeIcon icon={faEdit} className="block h-6 w-6" aria-hidden="true" />
-                </button>
-              )}
-              {page !== "home" && (
-                <button
-                  className="absolute text-white p-1"
-                  style={{ marginTop: "-3px", marginLeft: "307px" }}
-                  onClick={() => handleDelete(selectedSong._id)}
-                >
-                  <FontAwesomeIcon icon={faTrash} className="block h-6 w-6" aria-hidden="true" />
-                </button>
-              )}
-              <h2 className="text-sm font-semibold mb-4 text-red-500" style={{ marginRight: "65px" }}>{selectedSong.title}</h2>
-              <img src={selectedSong.coverImage} alt={selectedSong.title} className="mb-4" style={{ width: "250px", height: "250px" }} />
-              <p><strong className='text-red-500'>Artists:</strong> {selectedSong.artists.map(ele => ele.name).join(', ')}</p>
-              <p><strong className='text-red-500'>Albums:</strong> {selectedSong.albums.map(ele => ele.name).join(', ')}</p>
-              <p><strong className='text-red-500'>Genres:</strong> {selectedSong.genres.map(ele => ele.name).join(', ')}</p>
-              <AudioPlayer
-                src={selectedSong.file}
-                customAdditionalControls={[]}
-                customVolumeControls={[]}
-                autoPlayAfterSrcChange={false}
-                style={{
-                  backgroundColor: 'black',
-                  color: 'red',
-                  borderRadius: '0.375rem'
-                }}
-              />
-            </div>
-            <div className="md:w-1/3 mt-6 md:mt-0 md:ml-6">
-              {
-                localStorage.getItem("userType") === "user" && (
-                  <FontAwesomeIcon
-                    icon={selectedSong.liked===true ? faSolidHeart : faRegularHeart}
-                    className="cursor-pointer float-right mr-3"
-                    onClick={(e) => {e.stopPropagation(); handleLike(selectedSong)}}
-                    style={{height:"25px", width:"25px"}}
-                  />
-              )}
-              <div className="comments-section mt-4">
-                <h3 className="text-red-500 mb-2">Comments</h3>
-                  {localStorage.getItem("userType") === "user" && (
-                    <div className="add-comment mt-4 mb-4">
-                      <textarea
-                        className="w-full p-2 bg-black text-white rounded shadow-red"
-                        placeholder="Add a comment..."
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                      />
-                      <button
-                        className="mt-2 bg-red-500 text-white py-1 px-4 rounded text-sm"
-                        onClick={handleAddComment}
-                      >
-                        Add Comment
-                      </button>
-                    </div>
-                  )}
-                  <div className="comments-list" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {selectedSong.comments && selectedSong.comments.length > 0 ? (
-                      selectedSong.comments.map((comment) => (
-                        <div key={comment._id} className="comment mb-2">
-                          <p className='text-sm'>
-                            <strong className="text-red-500">{comment.user.firstName + " " + comment.user.lastName}</strong><br/>{comment.message}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      <p>No comments yet.</p>
-                    )}
-                  </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      <EditSongModal
-        isOpen={editModalIsOpen}
-        setIsOpen={setEditModalIsOpen}
-        formData={formData}
-        setFormData={setFormData}
-        errors={errors}
-        setErrors={setErrors}
-        handleSubmit={handleSubmit}
-        handleTitle={handleTitle}
-        handleFileChange={handleFileChange}
-        page={page}
-      />
-
-      <Modal
-        isOpen={playlistModalIsOpen}
-        onRequestClose={() => setPlaylistModalIsOpen(false)}
-        contentLabel="Select Playlists"
-        className="bg-black shadow-red p-6 rounded-lg w-full md:w-3/4 lg:w-2/3 xl:w-1/2 mx-auto my-20"
-      >
-        <h2 className="text-red-500 mb-4">Select Playlists</h2>
-        <div className="playlists">
-          {playlists.length > 0 ? (
-            playlists.map((playlist) => (
-              <div key={playlist._id} className="playlist mb-2">
-                <label className="text-white">
-                  <input
-                    type="checkbox"
-                    checked={selectedPlaylists.includes(playlist._id)}
-                    onChange={() => togglePlaylistSelection(playlist._id)}
-                  />
-                  {playlist.name}
-                </label>
-              </div>
-            ))
-          ) : (
-            <p className="text-white">No playlists available.</p>
-          )}
-        </div>
-        <button
-          className="mt-4 bg-red-500 text-white py-1 px-4 rounded"
-          onClick={handleAddSongToPlaylists}
-        >
-          Add to Playlists
-        </button>
-      </Modal>
-    </div>
+        Add to Playlists
+      </button>
+    </Modal>
+  </div>
   );
 };
 
