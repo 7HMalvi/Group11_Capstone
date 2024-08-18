@@ -9,7 +9,6 @@ const dataRouter = require('./routes/dataRoutes');
 
 
 const mongoDB = "mongodb+srv://parthjpatel:parth2106@cluster0.9sisgbx.mongodb.net/grooveix"
-
 try {
     mongoose.connect(mongoDB)
     console.log("Mongo DB Connected...!!!")
@@ -22,6 +21,7 @@ const app = express()
 
 app.use('/photo', express.static(path.join(__dirname, '/photo')))
 app.use('/audio', express.static(path.join(__dirname, '/audio')))
+app.use('/lyrics', express.static(path.join(__dirname, '/lyrics')))
 app.use('/other', express.static(path.join(__dirname, '/other')))
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json())
