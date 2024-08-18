@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DeleteUser, GetUserList, EditUser } from '../../services/APIRoutes';
-import EditUserModal from './EditUserModal';
+import EditUserModal from '../modals/EditUserModal';
 
 function UserTable() {
   const [users, setUsers] = useState([]);

@@ -116,6 +116,16 @@ export default function SongModal({ isUpload, isOpen, setIsOpen, formData, setFo
                   className="mt-1 block w-full"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium">Lyrics File </label>
+                <input
+                  type="file"
+                  name="lyrics"
+                  accept=".txt"
+                  onChange={handleFileChange}
+                  className="mt-1 block w-full"
+                />
+              </div>
               {errors.select && (<small className="text-sm text-red-500">{errors.select}</small>)}
               <div className="flex justify-end">
                 <button
