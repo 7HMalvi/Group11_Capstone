@@ -94,6 +94,6 @@ text{
     animation-delay: 7s;
 }
 
-.fa-heart path, .fa-heart-crack path{
+.fa-heart path, .fa-heart-crack path, .fa-trash path{
     fill: #f13333 !important;
 }
