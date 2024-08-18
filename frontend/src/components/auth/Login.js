@@ -2,8 +2,8 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import authImg from '../../../src/image/auth.png';
-import logoImg from '../../../src/image/logo.png';
+import authImg from '../../image/auth.png';
+import logoImg from '../../image/logo.png';
 import {LoginAPI} from '../../services/APIRoutes'
 import { omit } from "lodash";
 const validator = require('validator')
@@ -12,10 +12,9 @@ const validator = require('validator')
 export default function Login() {
 
     const [passwordVisible, setPasswordVisible] = useState(false);
-    const [values, setValues] = useState 
-    ({
-     email: "",
-    password: ""
+    const [values, setValues] = useState({
+        email: "",
+        password: ""
     })
     const [errors, setErrors] = useState({});
     const [loginError, setLoginError] = useState("");
@@ -29,36 +28,30 @@ export default function Login() {
         switch (name) {
             case "email":
                 if (!validator.isEmail(value)) {
-                    setErrors
-                    ({
+                    setErrors({
                         ...errors,
                         email: "Enter a valid email address",
                     });
-                }
-                else
-                {
+                }else {
                     let newObj = omit(errors, "email");
                     setErrors(newObj);
                 }
                 break;
   
             case "password":
-                if (value==="")
-                 {
+                if (value==="") {
                     setErrors({
                         ...errors,
                         password: "Please fill this field",
                     });
-                } 
-                else 
-                {
-                let newObj = omit(errors, "password");
-                setErrors(newObj);
+                } else {
+                    let newObj = omit(errors, "password");
+                    setErrors(newObj);
                 }
                 break;
     
             default:
-            break;
+                break;
         }
     };
   
@@ -67,8 +60,7 @@ export default function Login() {
         let name = event.target.name;
         let val = event.target.value;
         validate(name, val);
-        setValue
-        ({
+        setValues({
             ...values,
             [name]: val,
         });
@@ -80,9 +72,8 @@ export default function Login() {
 
         let blank_fields = {}
         for(let i in Object.keys(values)){
-            if(!values[Object.keys(values)[i]])
-            {
-             blank_fields = {...blank_fields, [Object.keys(values)[i]]: "Please fill this field"}
+            if(!values[Object.keys(values)[i]]){
+                blank_fields = {...blank_fields, [Object.keys(values)[i]]: "Please fill this field"}
             }
         }
         blank_fields = {...errors, ...blank_fields}
@@ -100,26 +91,24 @@ export default function Login() {
                                 });
             const status = result.status
             const data = await result.json()
-            if(data.error)
-            {
+            if(data.error){
                 throw new Error(data.error)
             }else if(status===201){
                 localStorage.setItem('userToken', data.token)
+                localStorage.setItem('userType', data.user.userType)
+                localStorage.setItem('userProfile', data.user.profilePic)
+                localStorage.setItem('isProUser', data.user.isProUser)
                 if(data.user.userType==="user"){
-                navigate("/home", {replace:true});
-                }
-                else
-                {
-                navigate("/dashboard", {replace:true});
+                    navigate("/home", {replace:true});
+                }else{
+                    navigate("/dashboard", {replace:true});
                 }
             }
-            }catch(error)
-            {
-            setLoginError(error.message)
+            }catch(error){
+                setLoginError(error.message)
             }
 
-            setValues
-            ({
+            setValues({
                 ...values,
                 password: ""
             });
@@ -130,29 +119,31 @@ export default function Login() {
   return (
     <div className='grid grid-cols-1 sm:grid-cols-2 w-full h-screen'>
         <div className='hidden sm:block bg-red-600'>
-            <img className="w-full h-screen object-cover" src={authImg} alt="Admin Login" />
+            <img className="w-full h-screen object-cover" src={authImg} alt="Logo" />
         </div>
         <div className='flex flex-col justify-center'>
             <img src={logoImg} alt="Logo" className='h-30 self-center' style={{width: "350px"}} />
             <form className='max-w-[370px] w-full mx-auto p-4 shadow-red text-white' onSubmit={handleSubmit}>
                 <div className='flex flex-col py-2'>
-                    <label className='text-sm'>Username or Email</label>
+                    <label className='text-sm'>Username or Email <span className="text-red-500">*</span></label>
                     <input className="text-sm border-0 border-b-2 border-red-600 p-2 bg-black focus:border-2 focus:border-red-500 focus:outline-none" 
                             type='text' 
                             name="email"
                             placeholder='Enter Email'
                             onChange={handleChange}
-                            value={values.email}/>
+                            value={values.email}
+                            required />
                     {errors.email && (<small className="text-sm text-red-500">{errors.email}</small>)}
                 </div>
                 <div className='flex flex-col py-2'>
-                    <label className='text-sm'>Password</label>
+                    <label className='text-sm'>Password <span className="text-red-500">*</span></label>
                     <input className="text-sm border-0 border-b-2 border-red-600 p-2 bg-black focus:border-2 focus:border-red-500 focus:outline-none" 
                             type={passwordVisible ? 'text' : 'password'}
                             name="password"
                             placeholder='Enter Password'
                             onChange={handleChange}
-                            value={values.password} />
+                            value={values.password}
+                            required />
                     <button
                         type='button'
                         onClick={togglePasswordVisibility}
@@ -168,12 +159,16 @@ export default function Login() {
                 </div>
                 <button className='w-full my-5 py-2 bg-red-600 hover:bg-red-500 text-white'>Login</button>
                 {
-                    loginError && <div className='flex flex-col py-2 text-sm'>
-                    <p className='text-red-500'>{loginError}</p>
+                    loginError &&
+                    <div className='flex flex-col py-2 text-sm'>
+                        <p className='text-red-500'>{loginError}</p>
                     </div>
                 }
                 <div className='flex justify-center'>
-                <p className='text-sm'>Don't have an account? <Link to="/signup" className='text-red-500'>Create an Account</Link></p>
+                    <p className='text-sm'>Don't have an account? <Link to="/signup" className='text-red-500'>Create an Account</Link></p>
+                </div>
+                <div className='flex justify-center'>
+                    <p className='text-sm'>Forgot password? <Link to="/forgotpassword" className='text-red-500'>Click here</Link></p>
                 </div>
             </form>
         </div>
