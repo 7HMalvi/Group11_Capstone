@@ -30,15 +30,15 @@ export default function Home() {
           <FontAwesomeIcon icon={faSearch} className="absolute left-0 top-0 mt-3 ml-2 text-gray-400" />
         </div>
       </div>
-      <SongList searchTerm={searchTerm}/>
-      <div class="music">
-        <img src={Image1} />
-        <img src={Image2} />
-        <img src={Image3} />
-        <img src={Image4} />
-        <img src={Image5} />
-        <img src={Image6} />
-        <img src={Image7} />
+      <SongList searchTerm={searchTerm} page={"home"}/>
+      <div className="music">
+        <img src={Image1} alt="Image1"/>
+        <img src={Image2} alt="Image2"/>
+        <img src={Image3} alt="Image3"/>
+        <img src={Image4} alt="Image4"/>
+        <img src={Image5} alt="Image5"/>
+        <img src={Image6} alt="Image6"/>
+        <img src={Image7} alt="Image7"/>
       </div>
     </div>
   )
