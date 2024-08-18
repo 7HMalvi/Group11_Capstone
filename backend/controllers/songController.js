@@ -49,6 +49,13 @@ exports.addSong = async (req, res) => {
             }
         }
 
+        if(req?.files?.lyrics && req?.files?.lyrics[0]){
+            payLoad = {
+                ...payLoad,
+                lyrics: req.files.lyrics[0].path.replace("lyrics\\","/lyrics/"),
+            }
+        }
+
         const processedAlbums = await Promise.all(albums.map(album => findOrCreate(Album, album)));
         const processedArtists = await Promise.all(artists.map(artist => findOrCreate(Artist, artist)));
         const processedGenres = await Promise.all(genres.map(genre => findOrCreate(Genre, genre)));
@@ -93,7 +100,7 @@ exports.updateSong = async (req,res) => {
             }
             newData = {
                 ...newData,
-                file: req.files.song[0].path,
+                file: req.files.song[0].path.replace("audio\\","/audio/")
             }
         }
         if(req?.files?.coverImage && req?.files?.coverImage[0]){
@@ -102,8 +109,18 @@ exports.updateSong = async (req,res) => {
             }
             newData = {
                 ...newData,
-                file: req.files.coverImage[0].path,
+                coverImage: req.files.coverImage[0].path.replace("photo\\","/photo/"),
             }
+        }
+        if(req?.files?.lyrics && req?.files?.lyrics[0]){
+            if (fs.existsSync(song.lyrics)) {
+                fs.unlinkSync(song.lyrics);
+            }
+            newData = {
+                ...newData,
+                lyrics: req.files.lyrics[0].path.replace("lyrics\\","/lyrics/")
+            }
+            console.log(newData)
         }
 
         const processedAlbums = await Promise.all(req.body.albums.map(album => findOrCreate(Album, album)));
@@ -570,7 +587,22 @@ exports.updatePlaylist = async (req, res) => {
         }
 
         res.status(200).send({ message: 'Playlists updated successfully' });
+
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
 };
+
+exports.getLyrics = async (req, res) => {
+    try {
+        const song = await Song.findById(req.params.id);
+        if (!song) {
+            throw new Error('Song not found');
+        }
+        const lyricsPath = path.join(__dirname, "../", song.lyrics);
+        const lyricsContent = await fs.readFile(lyricsPath, 'utf-8');
+        res.send({ lyrics: lyricsContent });
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+}
